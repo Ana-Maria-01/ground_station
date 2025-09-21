@@ -23,7 +23,7 @@ RH_RF95<SoftwareSerial> rf95(ss);
 
 String command;
 String input;
-unsigned char data[24];
+unsigned char data[4];
 
 unsigned long now = 0;
 unsigned long last_us = 0;
@@ -42,7 +42,7 @@ void setup()
   {
     Serial.println("RF initialisation failed!");
   }
-  rf95.setFrequency(460.0);
+  rf95.setFrequency(434.0);
 }
 
 /** MAIN CODE */
@@ -63,100 +63,86 @@ void loop()
   command = input;
 
   
-  if(command.equals("batt"))
+  if(command.equals("1"))
   {
-    strcpy((char*)data, "batt");
+    strcpy((char*)data, "1");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get battery command sent.");
   }
-  else if(command.equals("rssi"))
+  else if(command.equals("2"))
   {
-    strcpy((char*)data, "rssi");
+    strcpy((char*)data, "2");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //.println("Get RSSI command sent.");
   }
-  else if(command.equals("uptime"))
+  else if(command.equals("3"))
   {
-    strcpy((char*)data, "uptime");
+    strcpy((char*)data, "3");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get uptime command sent.");
   }
-  else if(command.startsWith("power"))
+  else if(command.equals("4"))
   {
-    command.getBytes(&data[0], sizeof(data));
+    strcpy((char*)data, "4");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Change rf power command sent.");
   }
-  else if(command.equals("coord"))
+  else if(command.equals("5"))
   {
-    strcpy((char*)data, "coord");
+    strcpy((char*)data, "5");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get coordinates command sent.");
   }
-  else if(command.equals("cartesian"))
+  else if(command.equals("6"))
   {
-    strcpy((char*)data, "cartesian");
+    strcpy((char*)data, "6");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get Cartesian coordinates command sent.");
   }
-  else if(command.equals("acc"))
+  else if(command.equals("7"))
   {
-    strcpy((char*)data, "acc");
+    strcpy((char*)data, "7");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get acceleration command sent.");
   }
-  else if(command.equals("ang_vel"))
+  else if(command.equals("8"))
   {
-    strcpy((char*)data, "ang_vel");
+    strcpy((char*)data, "8");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get velocity command sent.");
   }
-  else if(command.equals("magn_field"))
+  else if(command.equals("9"))
   {
-    strcpy((char*)data, "magn_field");
+    strcpy((char*)data, "9");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get magnetic field command sent.");
   }
-  else if(command.equals("adcs"))
+  else if(command.equals("10"))
   {
-    strcpy((char*)data, "adcs");
+    strcpy((char*)data, "10");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get ASDCS data (pitch, roll, heading) command sent.");
   }
-  else if(command.equals("temp_C"))
+  else if(command.equals("11"))
   {
-    strcpy((char*)data, "temp_C");
+    strcpy((char*)data, "11");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get temperature in C command sent.");
   }
-  else if(command.equals("temp_K"))
+  else if(command.equals("12"))
   {
-    strcpy((char*)data, "temp_K");
-    rf95.send(data, sizeof(data));
-    rf95.waitPacketSent();
-    //Serial.println("Get temperature in K command sent.");
-  }
-  else if(command.equals("calibrate"))
-  {
-    strcpy((char*)data, "calibrate");
-    rf95.send(data, sizeof(data));
-    rf95.waitPacketSent();
-    //Serial.println("Get temperature in K command sent.");
-  }
-  else if(command.equals("track"))
-  {
-    strcpy((char*)data, "track");
+    strcpy((char*)data, "12");
     rf95.send(data, sizeof(data));
     rf95.waitPacketSent();
     //Serial.println("Get temperature in K command sent.");

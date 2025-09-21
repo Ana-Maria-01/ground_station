@@ -1,0 +1,5 @@
+{
+    "port": "COM21",
+    "board": "arduino:avr:uno",
+    "sketch": "ground_station.ino"
+}
