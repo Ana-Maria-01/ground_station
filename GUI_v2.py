@@ -18,18 +18,18 @@ ser = serial.Serial('COM21', 115200, timeout=0.1)
 # === Command Definitions ===
 # Numeric IDs are sent; incoming lines start with "<id>:" except adcs (id 10) which starts with ":".
 commands_info = {
-    "batt":       {"id": 1,  "label": "Battery [V]",             "keyword": "1:"},
-    "rssi":       {"id": 2,  "label": "RSSI [dB]",               "keyword": "2:"},
-    "uptime":     {"id": 3,  "label": "Uptime [s]",              "keyword": "3:"},
-    "power=5":    {"id": 4,  "label": "Power [dB]",              "keyword": "4:"},
-    "coord":      {"id": 5,  "label": "GPS Coordinates",         "keyword": "5:"},
-    "cartesian":  {"id": 6,  "label": "Cartesian Coordinates",   "keyword": "6:"},
-    "acc":        {"id": 7,  "label": "Acceleration [mg]",       "keyword": "7:"},
-    "ang_vel":    {"id": 8,  "label": "Angular Velocity [dps]",  "keyword": "8:"},
-    "magn_field": {"id": 9,  "label": "Magnetic Field [uT]",     "keyword": "9:"},
-    "adcs":       {"id": 10, "label": "Roll/Pitch/Yaw [deg]",    "keyword": ":"},   # special
-    "temp_C":     {"id": 11, "label": "Temperature [°C]",        "keyword": "11:"},
-    "temp_K":     {"id": 12, "label": "Temperature [K]",         "keyword": "12:"},
+    "BATTERY":       {"id": 1,  "label": "Battery [V]",             "keyword": "1:"},
+    "RSSI":       {"id": 2,  "label": "RSSI [dB]",               "keyword": "2:"},
+    "UPTIME":     {"id": 3,  "label": "Uptime [s]",              "keyword": "3:"},
+    "POWER":    {"id": 4,  "label": "Power [dB]",              "keyword": "4:"},
+    "COORDS":      {"id": 5,  "label": "GPS Coordinates",         "keyword": "5:"},
+    "CARTESIAN":  {"id": 6,  "label": "Cartesian Coordinates",   "keyword": "6:"},
+    "ACC":        {"id": 7,  "label": "Acceleration [mg]",       "keyword": "7:"},
+    "GYRO":    {"id": 8,  "label": "Angular Velocity [dps]",  "keyword": "8:"},
+    "MAGNETIC": {"id": 9,  "label": "Magnetic Field [uT]",     "keyword": "9:"},
+    "ADCS":       {"id": 10, "label": "Roll/Pitch/Yaw [deg]",    "keyword": ":"},   # special
+    "TEMP":     {"id": 11, "label": "Temperature [°C]",        "keyword": "11:"},
+    "TEMP_K":     {"id": 12, "label": "Temperature [K]",         "keyword": "12:"},
 }
 
 value_fields = {}
