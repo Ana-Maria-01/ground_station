@@ -3,13 +3,20 @@ import serial
 import threading
 import time
 import queue
+import re
+import math
+import numpy as np
+import matplotlib
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 # === Serial Setup ===
 ser = serial.Serial('COM21', 115200, timeout=0.1)
 
 # === Command Definitions ===
-# id = number sent on click, keyword = what we expect at the start of incoming lines
-# For adcs, per your rule, keyword is ":" (just a leading colon).
+# Numeric IDs are sent; incoming lines start with "<id>:" except adcs (id 10) which starts with ":".
 commands_info = {
     "batt":       {"id": 1,  "label": "Battery [V]",             "keyword": "1:"},
     "rssi":       {"id": 2,  "label": "RSSI [dB]",               "keyword": "2:"},
@@ -28,12 +35,49 @@ commands_info = {
 value_fields = {}
 evt_q = queue.Queue()
 
-# === GUI Setup ===
-root = tk.Tk()
-root.title("Telemetry Dashboard")
-root.geometry("1200x800")
+# ---------------- Cube math ----------------
+def rot_x(r_deg):
+    th = math.radians(-r_deg)  # flip sign for roll to match your visual convention
+    c, s = math.cos(th), math.sin(th)
+    return np.array([[1, 0, 0],
+                     [0,  c,  s],
+                     [0, -s,  c]], dtype=float)
 
-dashboard_frame = tk.Frame(root)
+def rot_y(p_deg):
+    th = math.radians(-p_deg)  # flip sign for pitch to match your visual convention
+    c, s = math.cos(th), math.sin(th)
+    return np.array([[ c, 0, -s],
+                     [ 0, 1,  0],
+                     [ s, 0,  c]], dtype=float)
+
+def rot_z(y_deg):
+    th = math.radians(y_deg)
+    c, s = math.cos(th), math.sin(th)
+    return np.array([[c, -s, 0],
+                     [s,  c, 0],
+                     [0,  0, 1]], dtype=float)
+
+def apply_rotation(pts, r, p, y):
+    R = rot_z(y) @ rot_y(p) @ rot_x(r)
+    return (R @ pts.T).T
+
+def make_cube(edge=1.0):
+    a = edge / 2.0
+    V = np.array([[-a,-a,-a],[ a,-a,-a],[ a, a,-a],[-a, a,-a],
+                  [-a,-a, a],[ a,-a, a],[ a, a, a],[-a, a, a]], dtype=float)
+    faces = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[0,3,7,4]]
+    return V, faces
+
+# ---------------- Tk GUI ----------------
+root = tk.Tk()
+root.title("Telemetry Dashboard + ADCS Cube")
+root.geometry("1600x900")
+
+# Left: dashboard
+left_frame = tk.Frame(root)
+left_frame.pack(side='left', padx=10, pady=10, fill='y')
+
+dashboard_frame = tk.Frame(left_frame)
 dashboard_frame.pack(padx=10, pady=10, fill='x')
 
 def send_numeric(code: int):
@@ -43,7 +87,7 @@ def send_numeric(code: int):
     except Exception as e:
         print("Serial write error:", e)
 
-# Build rows
+# Build rows of buttons + value labels
 for cmd_name, info in commands_info.items():
     row = tk.Frame(dashboard_frame)
     row.pack(fill='x', pady=3)
@@ -63,13 +107,78 @@ for cmd_name, info in commands_info.items():
 
     value_fields[cmd_name] = value_label
 
-# === Parsing helper ===
+# Right: 3D cube
+right_frame = tk.Frame(root)
+right_frame.pack(side='left', padx=10, pady=10, fill='both', expand=True)
+
+fig = plt.Figure(figsize=(7,6))
+ax = fig.add_subplot(111, projection='3d')
+ax.set_box_aspect([1,1,1])
+
+edge = 1.0
+lim = 0.8 * edge
+ax.set_xlim3d(-lim, lim)
+ax.set_ylim3d(-lim, lim)
+ax.set_zlim3d(-lim, lim)
+ax.set_xlabel("X (toward you)")
+ax.set_ylabel("Y (right)")
+ax.set_zlabel("Z (up)")
+
+# axes arrows
+axes_len = edge * 0.8
+ax.quiver(0,0,0, axes_len,0,0)
+ax.quiver(0,0,0, 0,axes_len,0)
+ax.quiver(0,0,0, 0,0,axes_len)
+
+V0, faces = make_cube(edge)
+poly3d = Poly3DCollection([V0[f] for f in faces], alpha=0.35, edgecolor='k')
+ax.add_collection3d(poly3d)
+
+# Mark the "front" face (X+ = [1,2,6,5])
+front_idx = [1,2,6,5]
+front_marker = Poly3DCollection([V0[front_idx]], alpha=0.4)
+ax.add_collection3d(front_marker)
+
+title_text = ax.text2D(0.02, 0.95, "", transform=ax.transAxes)
+
+canvas = FigureCanvasTkAgg(fig, master=right_frame)
+canvas.get_tk_widget().pack(fill='both', expand=True)
+
+# latest RPY from ADCS
+latest_rpy = [0.0, 0.0, 0.0]
+
+def update_cube():
+    # redraw cube with latest_rpy
+    r, p, y = latest_rpy
+    V_rot = apply_rotation(V0, r, p, y)
+    poly3d.set_verts([V_rot[f] for f in faces])
+    front_marker.set_verts([V_rot[front_idx]])
+    title_text.set_text(f"Roll:{r:6.2f}°  Pitch:{p:6.2f}°  Yaw:{y:6.2f}°")
+    canvas.draw_idle()
+
+# ---------------- Parsing helpers ----------------
+_re_csv3 = re.compile(r'^\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*$')
 def value_after_first_colon(line: str) -> str:
-    """Return substring after the first ':'; if none, return whole line."""
     i = line.find(':')
     return line[i+1:].strip() if i >= 0 else line.strip()
 
-# === Serial Thread ===
+def parse_rpy(text: str):
+    """
+    Accepts "r,p,y" or any line with three floats.
+    Returns tuple (r, p, y) in degrees, or None.
+    """
+    s = text.strip()
+    if not s:
+        return None
+    m = _re_csv3.match(s)
+    if m:
+        return float(m.group(1)), float(m.group(2)), float(m.group(3))
+    nums = re.findall(r'[-+]?\d+(?:\.\d+)?', s)
+    if len(nums) >= 3:
+        return float(nums[0]), float(nums[1]), float(nums[2])
+    return None
+
+# ---------------- Serial Thread ----------------
 def read_serial_data():
     while True:
         try:
@@ -78,14 +187,20 @@ def read_serial_data():
                 if not line:
                     continue
 
-                # Match by keyword; for adcs we expect the line to START with ':'
                 handled = False
                 for cmd_name, info in commands_info.items():
                     kw = info["keyword"]
                     if kw == ":":
+                        # adcs: line must start with ":" then r,p,y
                         if line.startswith(":"):
-                            cleaned = value_after_first_colon(line)
-                            evt_q.put(("field", (cmd_name, cleaned)))
+                            payload = value_after_first_colon(line)
+                            rpy = parse_rpy(payload)
+                            if rpy:
+                                # push both label text and RPY update
+                                evt_q.put(("field", (cmd_name, payload)))
+                                evt_q.put(("rpy", rpy))
+                            else:
+                                evt_q.put(("field", (cmd_name, payload or "(parse error)")))
                             handled = True
                             break
                     else:
@@ -96,7 +211,7 @@ def read_serial_data():
                             break
 
                 if not handled:
-                    # Unrecognized line; ignore or print for debug
+                    # Unknown line; ignore or print for debug
                     # print(f"[UNPARSED] {line}")
                     pass
             else:
@@ -105,8 +220,11 @@ def read_serial_data():
             print("Serial read error:", e)
             time.sleep(0.1)
 
-# === UI thread: process queue & update labels ===
+# ---------------- UI event pump ----------------
 def process_events():
+    global latest_rpy
+    cube_needs_update = False
+
     try:
         while True:
             evt, payload = evt_q.get_nowait()
@@ -114,10 +232,17 @@ def process_events():
                 cmd_name, text = payload
                 if cmd_name in value_fields:
                     value_fields[cmd_name].config(text=text)
+            elif evt == "rpy":
+                r, p, y = payload
+                latest_rpy = [r, p, y]
+                cube_needs_update = True
     except queue.Empty:
         pass
 
-    root.after(30, process_events)  # ~33 FPS max
+    if cube_needs_update:
+        update_cube()
+
+    root.after(20, process_events)  # ~50 FPS max UI pump
 
 # === Launch threads and UI loop ===
 threading.Thread(target=read_serial_data, daemon=True).start()
