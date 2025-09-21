@@ -53,7 +53,7 @@ void loop()
   now = micros();
   float dt = float(now - last_us) * 1e-3f; // convert us to milliseconds;
   last_us = now;
-  Serial.println(dt);
+  //Serial.println(dt);
 
   if(Serial.available())
   {
