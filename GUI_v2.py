@@ -120,9 +120,9 @@ lim = 0.8 * edge
 ax.set_xlim3d(-lim, lim)
 ax.set_ylim3d(-lim, lim)
 ax.set_zlim3d(-lim, lim)
-ax.set_xlabel("X (toward you)")
-ax.set_ylabel("Y (right)")
-ax.set_zlabel("Z (up)")
+ax.set_xlabel("X")
+ax.set_ylabel("Y")
+ax.set_zlabel("Z")
 
 # axes arrows
 axes_len = edge * 0.8
@@ -153,7 +153,7 @@ def update_cube():
     V_rot = apply_rotation(V0, r, p, y)
     poly3d.set_verts([V_rot[f] for f in faces])
     front_marker.set_verts([V_rot[front_idx]])
-    title_text.set_text(f"Roll:{r:6.2f}°  Pitch:{p:6.2f}°  Yaw:{y:6.2f}°")
+    #title_text.set_text(f"Roll:{r:6.2f}°  Pitch:{p:6.2f}°  Yaw:{y:6.2f}°")
     canvas.draw_idle()
 
 # ---------------- Parsing helpers ----------------
